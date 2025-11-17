@@ -1,5 +1,3 @@
-# cs420-ray-tracer
-CS420 Ray Tracer Assignment files
 # CS420 Ray Tracer - UNIX/Linux Package
 
 ## ✅ For UNIX/Linux Systems - Use These Files
