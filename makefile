@@ -1,28 +1,44 @@
-# Building
-make serial       # Week 1: Serial version
-make openmp       # Week 1: OpenMP version  
-make cuda         # Week 2: GPU version
-make hybrid       # Week 3: Hybrid version
-make all          # Build everything
+CXX = g++
+CXXFLAGS = -std=c++11 -O3 -Wall
+OMPFLAGS = -fopenmp
+NVCC = nvcc
+CUDAFLAGS = -O3 -arch=sm_60
 
-# Testing
-make test         # Quick test
-make test-all     # Test all versions
-make benchmark    # Performance comparison
+# Define source and include directories
+SRCDIR = src
+INCDIR = include
 
-# Profiling
-make profile-serial   # gprof profiling
-make profile-openmp   # perf profiling
-make profile-cuda     # nvprof profiling
+# Add the include path to CXXFLAGS and CUDAFLAGS
+# The -I flag tells the compiler to look in $(INCDIR) for header files
+CXXFLAGS += -I$(INCDIR)
+CUDAFLAGS += -I$(INCDIR)
 
-# Memory checking
-make memcheck         # valgrind leak check
-make memcheck-openmp  # helgrind race detection
-make memcheck-cuda    # cuda-memcheck
 
-# Utilities
-make clean        # Remove all artifacts
-make view         # Display output image
-make convert      # PPM to PNG conversion
-make check-env    # Verify environment
-make help         # Show all commands
+# Week 1 targets
+serial: $(SRCDIR)/main.cpp
+	$(CXX) $(CXXFLAGS) -o ray_serial $(SRCDIR)/main.cpp
+
+openmp: $(SRCDIR)/main.cpp
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -o ray_openmp $(SRCDIR)/main.cpp
+
+# Week 2 target (placeholder)
+cuda: $(SRCDIR)/main_gpu.cu
+	$(NVCC) $(CUDAFLAGS) -o ray_cuda $(SRCDIR)/main_gpu.cu
+
+# Week 3 target (placeholder)
+hybrid: $(SRCDIR)/main_hybrid.cpp $(SRCDIR)/kernel.cu
+	$(NVCC) $(CUDAFLAGS) -c $(SRCDIR)/kernel.cu
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -c $(SRCDIR)/main_hybrid.cpp
+	$(NVCC) $(CUDAFLAGS) kernel.o main_hybrid.o -o ray_hybrid
+
+clean:
+	rm -f ray_serial ray_openmp ray_cuda ray_hybrid *.o *.ppm
+
+test: serial
+	./ray_serial
+	@echo "Check output_serial.ppm"
+
+benchmark: serial openmp
+	@echo "=== Performance Comparison ==="
+	@echo -n "Serial: "; ./ray_serial | grep "Serial time"
+	@echo -n "OpenMP: "; ./ray_openmp | grep "OpenMP time"
