@@ -2,7 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <chrono>
-#include <omp.h>
+// #include <omp.h>
 #include "vec3.h"
 #include "ray.h"
 #include "sphere.h"
