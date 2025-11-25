@@ -47,5 +47,8 @@ inline Vec3 reflect(const Vec3 &v, const Vec3 &n)
 {
     return v - n * (2 * v.dot(n));
 }
-
+// Added to correct code inconsistencies
+inline Vec3 reflect(const Vec3& v, const Vec3& n) {
+    return v - n * 2.0 * dot(v, n);
+}
 #endif
