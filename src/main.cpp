@@ -3,6 +3,8 @@
 #include <vector>
 #include <chrono>
 #include <omp.h>
+#include <sstream>
+#include <string>
 #include "vec3.h"
 #include "ray.h"
 #include "sphere.h"
@@ -95,46 +97,148 @@ void write_ppm(const std::string &filename, const std::vector<Vec3> &framebuffer
     }
 }
 
+// Load scene from file
+// Returns true on success, false on failure
+// Also returns camera parameters via reference
+bool load_scene(const std::string &filename, Scene &scene,
+                Vec3 &cam_pos, Vec3 &cam_lookat, double &cam_fov)
+{
+    std::ifstream file(filename);
+    if (!file.is_open())
+    {
+        std::cerr << "Error: Could not open scene file: " << filename << std::endl;
+        return false;
+    }
+
+    std::string line;
+    int line_num = 0;
+
+    // Set defaults
+    cam_pos = Vec3(0, 0, 0);
+    cam_lookat = Vec3(0, 0, -1);
+    cam_fov = 60;
+    scene.ambient_light = Vec3(0.1, 0.1, 0.1);
+
+    while (std::getline(file, line))
+    {
+        line_num++;
+
+        // Skip empty lines and comments
+        if (line.empty() || line[0] == '#')
+            continue;
+
+        std::istringstream iss(line);
+        std::string type;
+        iss >> type;
+
+        if (type == "sphere")
+        {
+            // Format: sphere x y z radius r g b metallic roughness shininess
+            double x, y, z, radius, r, g, b, metallic, roughness, shininess;
+            if (iss >> x >> y >> z >> radius >> r >> g >> b >> metallic >> roughness >> shininess)
+            {
+                // Note: The scene file format uses metallic/roughness, but our Material uses reflectivity
+                // We'll map metallic to reflectivity for now
+                scene.spheres.push_back(Sphere(
+                    Vec3(x, y, z),
+                    radius,
+                    Material{Vec3(r, g, b), metallic, shininess}
+                ));
+            }
+            else
+            {
+                std::cerr << "Warning: Invalid sphere format at line " << line_num << std::endl;
+            }
+        }
+        else if (type == "light")
+        {
+            // Format: light x y z r g b intensity
+            double x, y, z, r, g, b, intensity;
+            if (iss >> x >> y >> z >> r >> g >> b >> intensity)
+            {
+                scene.lights.push_back(Light{Vec3(x, y, z), Vec3(r, g, b), intensity});
+            }
+            else
+            {
+                std::cerr << "Warning: Invalid light format at line " << line_num << std::endl;
+            }
+        }
+        else if (type == "ambient")
+        {
+            // Format: ambient r g b
+            double r, g, b;
+            if (iss >> r >> g >> b)
+            {
+                scene.ambient_light = Vec3(r, g, b);
+            }
+            else
+            {
+                std::cerr << "Warning: Invalid ambient format at line " << line_num << std::endl;
+            }
+        }
+        else if (type == "camera")
+        {
+            // Format: camera pos_x pos_y pos_z lookat_x lookat_y lookat_z fov
+            double px, py, pz, lx, ly, lz, fov;
+            if (iss >> px >> py >> pz >> lx >> ly >> lz >> fov)
+            {
+                cam_pos = Vec3(px, py, pz);
+                cam_lookat = Vec3(lx, ly, lz);
+                cam_fov = fov;
+            }
+            else
+            {
+                std::cerr << "Warning: Invalid camera format at line " << line_num << std::endl;
+            }
+        }
+        else
+        {
+            std::cerr << "Warning: Unknown type '" << type << "' at line " << line_num << std::endl;
+        }
+    }
+
+    file.close();
+
+    std::cout << "Loaded scene from " << filename << ":\n";
+    std::cout << "  Spheres: " << scene.spheres.size() << "\n";
+    std::cout << "  Lights: " << scene.lights.size() << "\n";
+
+    return true;
+}
+
 int main(int argc, char *argv[])
 {
+    // Parse command-line arguments
+    std::string scene_file = "scenes/simple.txt"; // Default scene
+
+    if (argc > 1)
+    {
+        scene_file = argv[1];
+    }
+    else
+    {
+        std::cout << "Usage: " << argv[0] << " [scene_file]\n";
+        std::cout << "Using default scene: " << scene_file << "\n\n";
+    }
+
     // Image settings
     const int width = 640;
     const int height = 480;
     const int max_depth = 3;
 
-    // Create scene
+    // Create scene and load from file
     Scene scene;
+    Vec3 cam_pos, cam_lookat;
+    double cam_fov;
 
-    // Add spheres with different materials
-    // Center: Red diffuse sphere
-    scene.spheres.push_back(Sphere(Vec3(0, 0, -20), 3,
-                                   Material{Vec3(1, 0, 0), 0.2, 50}));
+    if (!load_scene(scene_file, scene, cam_pos, cam_lookat, cam_fov))
+    {
+        std::cerr << "Failed to load scene. Exiting.\n";
+        return 1;
+    }
 
-    // Left: Green sphere (more diffuse)
-    scene.spheres.push_back(Sphere(Vec3(-6, -1, -18), 2,
-                                   Material{Vec3(0, 1, 0), 0.1, 30}));
-
-    // Right: Blue shiny sphere
-    scene.spheres.push_back(Sphere(Vec3(5, 0, -17), 2,
-                                   Material{Vec3(0.3, 0.3, 1), 0.6, 100}));
-
-    // Small mirror sphere in front
-    scene.spheres.push_back(Sphere(Vec3(2, -2, -12), 1.5,
-                                   Material{Vec3(0.9, 0.9, 0.9), 0.8, 200}));
-
-    // Ground plane (large sphere below)
-    scene.spheres.push_back(Sphere(Vec3(0, -1004, -20), 1000,
-                                   Material{Vec3(0.5, 0.5, 0.5), 0.1, 10}));
-
-    // Add lights
-    // Main light (top right)
-    scene.lights.push_back(Light{Vec3(10, 10, -10), Vec3(1, 1, 1), 0.8});
-
-    // Fill light (left side, softer)
-    scene.lights.push_back(Light{Vec3(-10, 5, -5), Vec3(0.5, 0.5, 0.7), 0.3});
-
-    // Setup camera
-    Camera camera(Vec3(0, 0, 0), Vec3(0, 0, -1), 60);
+    // Setup camera from loaded parameters
+    Camera camera(cam_pos, cam_lookat, cam_fov);
 
     // Framebuffer
     std::vector<Vec3> framebuffer(width * height);
