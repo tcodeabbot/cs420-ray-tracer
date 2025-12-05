@@ -2,7 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <chrono>
-// #include <omp.h>
+#include <omp.h>
 #include "vec3.h"
 #include "ray.h"
 #include "sphere.h"
@@ -161,22 +161,39 @@ int main(int argc, char *argv[])
 
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> diff = end - start;
-    std::cout << "Serial time: " << diff.count() << " seconds\n";
+    double serial_time = diff.count();
+    std::cout << "Serial time: " << serial_time << " seconds\n";
 
     write_ppm("output_serial.ppm", framebuffer, width, height);
 
-// TODO: STUDENT - Add OpenMP version
 // OPENMP VERSION
 #ifdef _OPENMP
     std::cout << "\nRendering (OpenMP)...\n";
+    std::cout << "Using " << omp_get_max_threads() << " threads\n";
     start = std::chrono::high_resolution_clock::now();
 
-    // YOUR OPENMP CODE HERE
-    // Hint: Use #pragma omp parallel for with appropriate scheduling
+// Parallel ray tracing with optimal OpenMP configuration
+// - collapse(2): Parallelize both i and j loops for maximum parallelism
+// - schedule(guided): Dynamic load balancing (ray tracing workload varies per pixel)
+// - Each pixel writes to unique framebuffer location (no race conditions)
+#pragma omp parallel for collapse(2) schedule(guided)
+    for (int j = 0; j < height; j++)
+    {
+        for (int i = 0; i < width; i++)
+        {
+            double u = double(i) / (width - 1);
+            double v = double(j) / (height - 1);
+
+            Ray ray = camera.get_ray(u, v);
+            framebuffer[j * width + i] = trace_ray(ray, scene, max_depth);
+        }
+    }
 
     end = std::chrono::high_resolution_clock::now();
     diff = end - start;
-    std::cout << "OpenMP time: " << diff.count() << " seconds\n";
+    double parallel_time = diff.count();
+    std::cout << "OpenMP time: " << parallel_time << " seconds\n";
+    std::cout << "Speedup: " << (serial_time / parallel_time) << "x\n";
 
     write_ppm("output_openmp.ppm", framebuffer, width, height);
 #endif
