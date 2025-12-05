@@ -2,7 +2,10 @@ CXX = g++
 CXXFLAGS = -std=c++11 -O3 -Wall
 OMPFLAGS = -fopenmp
 NVCC = nvcc
-CUDAFLAGS = -O3 -arch=sm_60
+# Use sm_75 for Turing+ GPUs, or sm_86 for Ampere+
+# Use sm_52 for older Maxwell GPUs if needed
+# CUDA 13.0 compatibility: force include cuda_fix.h and define constants
+CUDAFLAGS = -O3 -arch=sm_75 -std=c++14 --compiler-options -include,$(INCDIR)/cuda_fix.h
 
 # Define source and include directories
 SRCDIR = src
