@@ -35,11 +35,23 @@ hybrid: $(SRCDIR)/main_hybrid.cpp $(SRCDIR)/kernel.cu
 	$(NVCC) $(CUDAFLAGS) kernel.o main_hybrid.o -o ray_hybrid
 
 clean:
-	rm -f ray_serial ray_openmp ray_cuda ray_hybrid *.o *.ppm
+	rm -f ray_serial ray_openmp ray_cuda ray_hybrid *.o *.ppm *.png
 
 test: serial
 	./ray_serial
-	@echo "Check output_serial.ppm"
+	@if [ -f output_serial.ppm ]; then convert output_serial.ppm output_serial.png && echo "Created output_serial.png"; fi
+
+test-openmp: openmp
+	./ray_openmp
+	@if [ -f output_omp.ppm ]; then convert output_omp.ppm output_omp.png && echo "Created output_omp.png"; fi
+
+test-cuda: cuda
+	./ray_cuda
+	@if [ -f output_gpu.ppm ]; then convert output_gpu.ppm output_gpu.png && echo "Created output_gpu.png"; fi
+
+test-hybrid: hybrid
+	./ray_hybrid
+	@if [ -f output_hybrid.ppm ]; then convert output_hybrid.ppm output_hybrid.png && echo "Created output_hybrid.png"; fi
 
 benchmark: serial openmp
 	@echo "=== Performance Comparison ==="
