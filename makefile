@@ -53,7 +53,8 @@ test-hybrid: hybrid
 	./ray_hybrid
 	@if [ -f output_hybrid.ppm ]; then convert output_hybrid.ppm output_hybrid.png && echo "Created output_hybrid.png"; fi
 
-benchmark: serial openmp
+benchmark: serial openmp cuda
 	@echo "=== Performance Comparison ==="
 	@echo -n "Serial: "; ./ray_serial | grep "Serial time"
 	@echo -n "OpenMP: "; ./ray_openmp | grep "OpenMP time"
+	@echo -n "CUDA:   "; ./ray_cuda | grep "GPU rendering time"

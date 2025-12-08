@@ -47,8 +47,10 @@ void write_ppm(const std::string &filename, const std::vector<Vec3> &framebuffer
     {
         for (int i = 0; i < width; i++)
         {
-            int r, g, b;
-            framebuffer[j * width + i].to_rgb(r, g, b);
+            Vec3 color = framebuffer[j * width + i];
+            int r = int(255.99 * std::min(1.0, color.x));
+            int g = int(255.99 * std::min(1.0, color.y));
+            int b = int(255.99 * std::min(1.0, color.z));
             file << r << " " << g << " " << b << "\n";
         }
     }
@@ -58,30 +60,88 @@ void write_ppm(const std::string &filename, const std::vector<Vec3> &framebuffer
 }
 
 // =========================================================
-// Scene Creation (reuse from Week 1)
+// Scene Creation and Loading
 // =========================================================
 Scene create_test_scene()
 {
     Scene scene;
 
     // Add spheres
-    scene.add_sphere(Sphere(Vec3(0, 0, -20), 2.0,
-                            Material::diffuse(Vec3(1, 0, 0))));
-    scene.add_sphere(Sphere(Vec3(3, 0, -20), 2.0,
-                            Material::metal(Vec3(0.8, 0.8, 0.8), 0.1)));
-    scene.add_sphere(Sphere(Vec3(-3, 0, -20), 2.0,
-                            Material::diffuse(Vec3(0, 0, 1))));
-    scene.add_sphere(Sphere(Vec3(0, -102, -20), 100.0,
-                            Material::diffuse(Vec3(0.5, 0.5, 0.5))));
+    add_sphere(scene, Sphere(Vec3(0, 0, -20), 2.0,
+                            Material{Vec3(1, 0, 0), 0.0, 32.0}));
+    add_sphere(scene, Sphere(Vec3(3, 0, -20), 2.0,
+                            Material{Vec3(0.8, 0.8, 0.8), 0.8, 64.0}));
+    add_sphere(scene, Sphere(Vec3(-3, 0, -20), 2.0,
+                            Material{Vec3(0, 0, 1), 0.0, 32.0}));
+    add_sphere(scene, Sphere(Vec3(0, -102, -20), 100.0,
+                            Material{Vec3(0.5, 0.5, 0.5), 0.0, 32.0}));
 
     // Add lights
-    scene.add_light(Light(Vec3(10, 10, -10), Vec3(1, 1, 1), 0.7));
-    scene.add_light(Light(Vec3(-10, 10, -10), Vec3(1, 1, 0.8), 0.5));
+    add_light(scene, Light{Vec3(10, 10, -10), Vec3(1, 1, 1), 0.7});
+    add_light(scene, Light{Vec3(-10, 10, -10), Vec3(1, 1, 0.8), 0.5});
 
     // Set ambient
-    scene.set_ambient(Vec3(0.1, 0.1, 0.1));
+    set_ambient(scene, Vec3(0.1, 0.1, 0.1));
 
     return scene;
+}
+
+bool load_scene_hybrid(const std::string& filename, Scene& scene,
+                      Camera& camera, int width, int height) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open scene file: " << filename << std::endl;
+        return false;
+    }
+
+    std::string line;
+    Vec3 cam_pos(0, 2, 5);
+    Vec3 cam_lookat(0, 0, -20);
+    double cam_fov = 60.0;
+
+    while (std::getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+
+        std::istringstream iss(line);
+        std::string type;
+        iss >> type;
+
+        if (type == "sphere") {
+            double x, y, z, radius, r, g, b, metallic, roughness, shininess;
+            if (iss >> x >> y >> z >> radius >> r >> g >> b >> metallic >> roughness >> shininess) {
+                add_sphere(scene, Sphere(Vec3(x, y, z), radius,
+                                       Material{Vec3(r, g, b), metallic, shininess}));
+            }
+        } else if (type == "light") {
+            double x, y, z, r, g, b, intensity;
+            if (iss >> x >> y >> z >> r >> g >> b >> intensity) {
+                add_light(scene, Light{Vec3(x, y, z), Vec3(r, g, b), intensity});
+            }
+        } else if (type == "ambient") {
+            double r, g, b;
+            if (iss >> r >> g >> b) {
+                set_ambient(scene, Vec3(r, g, b));
+            }
+        } else if (type == "camera") {
+            double px, py, pz, lx, ly, lz, fov;
+            if (iss >> px >> py >> pz >> lx >> ly >> lz >> fov) {
+                cam_pos = Vec3(px, py, pz);
+                cam_lookat = Vec3(lx, ly, lz);
+                cam_fov = fov;
+            }
+        }
+    }
+
+    file.close();
+
+    // Create camera
+    camera = Camera(cam_pos, cam_lookat, cam_fov);
+
+    std::cout << "Loaded scene from " << filename << ":\n";
+    std::cout << "  Spheres: " << scene.spheres.size() << "\n";
+    std::cout << "  Lights: " << scene.lights.size() << "\n";
+
+    return true;
 }
 
 // =========================================================
@@ -105,6 +165,46 @@ struct Tile
 };
 
 // =========================================================
+// Scene Helper Methods
+// =========================================================
+namespace {
+    const std::vector<Sphere>& get_spheres(const Scene& scene) {
+        return scene.spheres;
+    }
+
+    const std::vector<Light>& get_lights(const Scene& scene) {
+        return scene.lights;
+    }
+
+    const Vec3& get_ambient(const Scene& scene) {
+        return scene.ambient_light;
+    }
+
+    void add_sphere(Scene& scene, const Sphere& sphere) {
+        scene.spheres.push_back(sphere);
+    }
+
+    void add_light(Scene& scene, const Light& light) {
+        scene.lights.push_back(light);
+    }
+
+    void set_ambient(Scene& scene, const Vec3& ambient) {
+        scene.ambient_light = ambient;
+    }
+
+    void print_stats(const Scene& scene) {
+        std::cout << "Scene stats:\n";
+        std::cout << "  Spheres: " << scene.spheres.size() << "\n";
+        std::cout << "  Lights: " << scene.lights.size() << "\n";
+    }
+
+    Vec3 get_background(const Scene& scene, const Ray& ray) {
+        double t = 0.5 * (ray.direction.y + 1.0);
+        return Vec3(1, 1, 1) * (1.0 - t) + Vec3(0.5, 0.7, 1.0) * t;
+    }
+}
+
+// =========================================================
 // GPU Kernel Declaration (implemented in kernel.cu)
 // =========================================================
 extern "C" void launch_gpu_kernel(
@@ -118,16 +218,49 @@ extern "C" void launch_gpu_kernel(
     int max_depth,
     cudaStream_t stream);
 
+extern "C" void upload_lights_to_constant(float *h_lights, int num_lights, float *h_ambient);
+
 // =========================================================
 // CPU Ray Tracing (Complex Shading Path)
 // =========================================================
 Vec3 trace_ray_cpu(const Ray &ray, const Scene &scene, int depth)
 {
-    // TODO: STUDENT - Implement CPU ray tracing
-    // This should handle complex shading, deep reflections, etc.
-    // Can reuse code from Week 1
+    if (depth <= 0)
+        return Vec3(0, 0, 0);
 
-    return scene.get_background(ray);
+    double t;
+    int sphere_idx;
+
+    // Find closest intersection
+    if (!scene.find_intersection(ray, t, sphere_idx))
+    {
+        // Sky color gradient background
+        double blend = 0.5 * (ray.direction.y + 1.0);
+        return Vec3(1, 1, 1) * (1.0 - blend) + Vec3(0.5, 0.7, 1.0) * blend;
+    }
+
+    // Calculate hit point and normal
+    const Sphere &sphere = scene.spheres[sphere_idx];
+    Vec3 hit_point = ray.at(t);
+    Vec3 normal = sphere.normal_at(hit_point);
+    Vec3 view_dir = (ray.origin - hit_point).normalized();
+
+    // Get shaded color
+    Vec3 color = scene.shade(hit_point, normal, sphere.material, view_dir);
+
+    // Handle reflections
+    if (sphere.material.reflectivity > 0.01 && depth > 1)
+    {
+        Vec3 reflect_dir = reflect(ray.direction, normal);
+        Ray reflect_ray(hit_point + normal * 0.001, reflect_dir);
+        Vec3 reflect_color = trace_ray_cpu(reflect_ray, scene, depth - 1);
+
+        // Mix direct color with reflection
+        color = color * (1.0 - sphere.material.reflectivity) +
+                reflect_color * sphere.material.reflectivity;
+    }
+
+    return color;
 }
 
 void process_tile_cpu(const Tile &tile, const Scene &scene, const Camera &camera,
@@ -139,7 +272,9 @@ void process_tile_cpu(const Tile &tile, const Scene &scene, const Camera &camera
     {
         for (int x = tile.x_start; x < tile.x_end; x++)
         {
-            Ray ray = camera.get_ray_pixel(x, y, width, height);
+            double u = double(x) / double(width - 1);
+            double v = double(y) / double(height - 1);
+            Ray ray = camera.get_ray(u, v);
             framebuffer[y * width + x] = trace_ray_cpu(ray, scene, max_depth);
         }
     }
@@ -162,7 +297,7 @@ public:
     GPUResources(int width, int height, int num_spheres, int num_lights)
     {
         fb_size = width * height * 3 * sizeof(float);
-        spheres_size = num_spheres * 8 * sizeof(float); // center(3) + radius(1) + material(4)
+        spheres_size = num_spheres * 10 * sizeof(float); // center(3) + radius(1) + albedo(3) + metallic(1) + roughness(1) + shininess(1)
         lights_size = num_lights * 7 * sizeof(float);   // position(3) + color(3) + intensity(1)
 
         cudaMalloc(&d_framebuffer, fb_size);
@@ -179,14 +314,85 @@ public:
 
     void upload_scene(const Scene &scene)
     {
-        // TODO: STUDENT - Convert scene data to GPU format and upload
-        // Pack spheres and lights into float arrays
+        // Pack spheres into flat array: [center.xyz, radius, albedo.xyz, metallic, roughness, shininess]
+        const auto& spheres = get_spheres(scene);
+        std::vector<float> h_spheres_packed(spheres.size() * 10);
+        for (size_t i = 0; i < spheres.size(); i++) {
+            int idx = i * 10;
+            h_spheres_packed[idx + 0] = spheres[i].center.x;
+            h_spheres_packed[idx + 1] = spheres[i].center.y;
+            h_spheres_packed[idx + 2] = spheres[i].center.z;
+            h_spheres_packed[idx + 3] = spheres[i].radius;
+            h_spheres_packed[idx + 4] = spheres[i].material.color.x;
+            h_spheres_packed[idx + 5] = spheres[i].material.color.y;
+            h_spheres_packed[idx + 6] = spheres[i].material.color.z;
+            h_spheres_packed[idx + 7] = spheres[i].material.reflectivity;
+            h_spheres_packed[idx + 8] = 0.0f; // roughness (not used in current material)
+            h_spheres_packed[idx + 9] = spheres[i].material.shininess;
+        }
+
+        // Pack lights into flat array: [position.xyz, color.xyz, intensity]
+        const auto& lights = get_lights(scene);
+        std::vector<float> h_lights_packed(lights.size() * 7);
+        for (size_t i = 0; i < lights.size(); i++) {
+            int idx = i * 7;
+            h_lights_packed[idx + 0] = lights[i].position.x;
+            h_lights_packed[idx + 1] = lights[i].position.y;
+            h_lights_packed[idx + 2] = lights[i].position.z;
+            h_lights_packed[idx + 3] = lights[i].color.x;
+            h_lights_packed[idx + 4] = lights[i].color.y;
+            h_lights_packed[idx + 5] = lights[i].color.z;
+            h_lights_packed[idx + 6] = lights[i].intensity;
+        }
+
+        // Pack ambient light
+        const Vec3& ambient = get_ambient(scene);
+        float h_ambient[3] = {(float)ambient.x, (float)ambient.y, (float)ambient.z};
+
+        // Upload to GPU
+        if (spheres.size() > 0) {
+            cudaMemcpy(d_spheres, h_spheres_packed.data(), spheres_size, cudaMemcpyHostToDevice);
+        }
+        if (lights.size() > 0) {
+            cudaMemcpy(d_lights, h_lights_packed.data(), lights_size, cudaMemcpyHostToDevice);
+        }
+
+        // Upload lights to constant memory
+        upload_lights_to_constant(h_lights_packed.data(), lights.size(), h_ambient);
     }
 
     void download_tile(const Tile &tile, std::vector<Vec3> &framebuffer,
                        int width, cudaStream_t stream)
     {
-        // TODO: STUDENT - Download tile results from GPU to CPU framebuffer
+        // Download tile region from GPU framebuffer to CPU framebuffer
+        // Copy row by row since the tile may not span full width
+        for (int y = tile.y_start; y < tile.y_end; y++)
+        {
+            int row_offset = y * width + tile.x_start;
+            int row_width = tile.x_end - tile.x_start;
+
+            // Create temporary buffer for row
+            std::vector<float> row_data(row_width * 3);
+
+            // Download row from GPU (async)
+            cudaMemcpyAsync(row_data.data(),
+                           d_framebuffer + row_offset * 3,
+                           row_width * 3 * sizeof(float),
+                           cudaMemcpyDeviceToHost,
+                           stream);
+
+            // Synchronize stream to ensure data is ready
+            cudaStreamSynchronize(stream);
+
+            // Unpack into Vec3 framebuffer
+            for (int x = 0; x < row_width; x++)
+            {
+                int fb_idx = y * width + tile.x_start + x;
+                framebuffer[fb_idx] = Vec3(row_data[x * 3 + 0],
+                                          row_data[x * 3 + 1],
+                                          row_data[x * 3 + 2]);
+            }
+        }
     }
 
     float *get_framebuffer() { return d_framebuffer; }
@@ -307,19 +513,65 @@ void render_hybrid(const Scene &scene, const Camera &camera,
 // GPU processing section
 #pragma omp section
         {
+            // Pack camera parameters into flat array
+            float camera_params[12];
+            camera_params[0] = camera.position.x;
+            camera_params[1] = camera.position.y;
+            camera_params[2] = camera.position.z;
+
+            // Calculate camera basis vectors (similar to GPU version)
+            Vec3 forward = (Vec3(0, 0, -20) - camera.position).normalized();
+            Vec3 right = cross(forward, Vec3(0, 1, 0)).normalized();
+            Vec3 up = cross(right, forward).normalized();
+
+            double aspect = double(width) / double(height);
+            double scale = tan(camera.fov * 0.5 * M_PI / 180.0);
+
+            Vec3 horizontal = right * (2.0 * scale * aspect);
+            Vec3 vertical = up * (2.0 * scale);
+            Vec3 lower_left = camera.position + forward - horizontal * 0.5 - vertical * 0.5;
+
+            camera_params[3] = lower_left.x;
+            camera_params[4] = lower_left.y;
+            camera_params[5] = lower_left.z;
+            camera_params[6] = horizontal.x;
+            camera_params[7] = horizontal.y;
+            camera_params[8] = horizontal.z;
+            camera_params[9] = vertical.x;
+            camera_params[10] = vertical.y;
+            camera_params[11] = vertical.z;
+
             int stream_idx = 0;
+            std::vector<Tile*> processing_tiles;
+
             while (!gpu_queue.empty())
             {
                 Tile *tile = gpu_queue.front();
                 gpu_queue.pop();
 
-                // TODO: STUDENT - Launch GPU kernel for this tile
-                // Use streams for asynchronous execution
                 cudaStream_t stream = streams[stream_idx];
                 stream_idx = (stream_idx + 1) % NUM_STREAMS;
 
-                // launch_gpu_kernel(..., stream);
+                // Launch GPU kernel for this tile
+                launch_gpu_kernel(
+                    gpu_resources.get_framebuffer(),
+                    gpu_resources.get_spheres(),
+                    scene.spheres.size(),
+                    gpu_resources.get_lights(),
+                    scene.lights.size(),
+                    camera_params,
+                    tile->x_start, tile->y_start,
+                    tile->x_end - tile->x_start,
+                    tile->y_end - tile->y_start,
+                    width, height,
+                    max_depth,
+                    stream
+                );
 
+                // Download results asynchronously
+                gpu_resources.download_tile(*tile, framebuffer, width, stream);
+
+                processing_tiles.push_back(tile);
                 tile->processed = true;
             }
 
@@ -439,16 +691,15 @@ int main(int argc, char *argv[])
     std::cout << "Tile size: " << tile_size << "x" << tile_size << std::endl;
 
     // Create scene (can load from file or create programmatically)
-    Scene scene = create_test_scene(); // Reuse from Week 1
-    scene.print_stats();
+    Scene scene = create_test_scene();
+    print_stats(scene);
 
     // Setup camera
     Vec3 lookfrom(0, 2, 5);
     Vec3 lookat(0, 0, -20);
-    Vec3 vup(0, 1, 0);
     double vfov = 60.0;
 
-    Camera camera(lookfrom, lookat, vup, vfov, aspect_ratio);
+    Camera camera(lookfrom, lookat, vfov);
 
     // Allocate framebuffer
     std::vector<Vec3> framebuffer(width * height);
