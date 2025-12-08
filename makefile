@@ -43,7 +43,7 @@ test: serial
 
 test-openmp: openmp
 	./ray_openmp
-	@if [ -f output_omp.ppm ]; then convert output_omp.ppm output_omp.png && echo "Created output_omp.png"; fi
+	@if [ -f output_openmp.ppm ]; then convert output_openmp.ppm output_openmp.png && echo "Created output_openmp.png"; fi
 
 test-cuda: cuda
 	./ray_cuda
