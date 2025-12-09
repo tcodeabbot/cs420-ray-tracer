@@ -1,0 +1,144 @@
+=========================================
+CS420 Ray Tracer - Performance Benchmark
+=========================================
+
+Configuration:
+  Scenes: simple.txt medium.txt complex.txt
+  Thread counts: 1 2 4 8
+  Iterations per test: 3
+
+[0;34m=== Scene: simple.txt ===[0m
+Serial Implementation:
+  Serial (threads=1, iter=1)... [0;32m0.0579158s[0m (5304252.03 pixels/s)
+  Serial (threads=1, iter=2)... [0;32m0.0508346s[0m (6043128.10 pixels/s)
+  Serial (threads=1, iter=3)... [0;32m0.0604277s[0m (5083761.25 pixels/s)
+  Average: 0.056 ± 0.004 seconds
+
+OpenMP Implementation:
+  Testing with 1 threads:
+  OpenMP (threads=1, iter=1)... [0;32m0.0651086s[0m (4718270.70 pixels/s)
+  OpenMP (threads=1, iter=2)... [0;32m0.0654339s[0m (4694814.15 pixels/s)
+  OpenMP (threads=1, iter=3)... [0;32m0.0648797s[0m (4734917.08 pixels/s)
+  Average: 0.065 ± 0.000 seconds
+  Testing with 2 threads:
+  OpenMP (threads=2, iter=1)... [0;32m0.0436137s[0m (7043658.30 pixels/s)
+  OpenMP (threads=2, iter=2)... [0;32m0.0435232s[0m (7058304.53 pixels/s)
+  OpenMP (threads=2, iter=3)... [0;32m0.0333939s[0m (9199284.89 pixels/s)
+  Average: 0.040 ± 0.005 seconds
+  Testing with 4 threads:
+  OpenMP (threads=4, iter=1)... [0;32m0.0185898s[0m (16525191.23 pixels/s)
+  OpenMP (threads=4, iter=2)... [0;32m0.0187326s[0m (16399218.47 pixels/s)
+  OpenMP (threads=4, iter=3)... [0;32m0.0185568s[0m (16554578.37 pixels/s)
+  Average: 0.019 ± 0.000 seconds
+  Testing with 8 threads:
+  OpenMP (threads=8, iter=1)... [0;32m0.0113713s[0m (27015380.82 pixels/s)
+  OpenMP (threads=8, iter=2)... [0;32m0.0109542s[0m (28044037.90 pixels/s)
+  OpenMP (threads=8, iter=3)... [0;32m0.0117594s[0m (26123781.82 pixels/s)
+  Average: 0.011 ± 0.000 seconds
+
+CUDA Implementation:
+  CUDA (threads=1, iter=1)... [0;32m4.8544s[0m (63282.79 pixels/s)
+  CUDA (threads=1, iter=2)... [0;32m4.8288s[0m (63618.29 pixels/s)
+  CUDA (threads=1, iter=3)... [0;32m5.4912s[0m (55944.05 pixels/s)
+  Average: 5.058 ± 0.306 seconds
+
+[0;34m=== Scene: medium.txt ===[0m
+Serial Implementation:
+  Serial (threads=1, iter=1)... [0;32m0.164674s[0m (2914849.94 pixels/s)
+  Serial (threads=1, iter=2)... [0;32m0.187673s[0m (2557640.15 pixels/s)
+  Serial (threads=1, iter=3)... [0;32m0.166126s[0m (2889373.12 pixels/s)
+  Average: 0.173 ± 0.011 seconds
+
+OpenMP Implementation:
+  Testing with 1 threads:
+  OpenMP (threads=1, iter=1)... [0;32m0.179466s[0m (2674601.31 pixels/s)
+  OpenMP (threads=1, iter=2)... [0;32m0.173428s[0m (2767719.16 pixels/s)
+  OpenMP (threads=1, iter=3)... [0;32m0.174582s[0m (2749424.33 pixels/s)
+  Average: 0.176 ± 0.003 seconds
+  Testing with 2 threads:
+  OpenMP (threads=2, iter=1)... [0;32m0.105541s[0m (4547995.56 pixels/s)
+  OpenMP (threads=2, iter=2)... [0;32m0.0929243s[0m (5165494.92 pixels/s)
+  OpenMP (threads=2, iter=3)... [0;32m0.107923s[0m (4447615.42 pixels/s)
+  Average: 0.102 ± 0.007 seconds
+  Testing with 4 threads:
+  OpenMP (threads=4, iter=1)... [0;32m0.0600196s[0m (7997387.52 pixels/s)
+  OpenMP (threads=4, iter=2)... [0;32m0.0496121s[0m (9675059.10 pixels/s)
+  OpenMP (threads=4, iter=3)... [0;32m0.0474561s[0m (10114611.18 pixels/s)
+  Average: 0.052 ± 0.005 seconds
+  Testing with 8 threads:
+  OpenMP (threads=8, iter=1)... [0;32m0.0347324s[0m (13819949.09 pixels/s)
+  OpenMP (threads=8, iter=2)... [0;32m0.0379031s[0m (12663871.82 pixels/s)
+  OpenMP (threads=8, iter=3)... [0;32m0.0330452s[0m (14525558.93 pixels/s)
+  Average: 0.035 ± 0.002 seconds
+
+CUDA Implementation:
+  CUDA (threads=1, iter=1)... [0;32m9.8752s[0m (48606.61 pixels/s)
+  CUDA (threads=1, iter=2)... [0;32m9.8176s[0m (48891.78 pixels/s)
+  CUDA (threads=1, iter=3)... [0;32m9.8528s[0m (48717.11 pixels/s)
+  Average: 9.849 ± 0.024 seconds
+
+[0;34m=== Scene: complex.txt ===[0m
+Serial Implementation:
+  Serial (threads=1, iter=1)... [0;32m0.502645s[0m (1833500.78 pixels/s)
+  Serial (threads=1, iter=2)... [0;32m0.494132s[0m (1865088.68 pixels/s)
+  Serial (threads=1, iter=3)... [0;32m0.51206s[0m (1799789.08 pixels/s)
+  Average: 0.503 ± 0.007 seconds
+
+OpenMP Implementation:
+  Testing with 1 threads:
+  OpenMP (threads=1, iter=1)... [0;32m0.563465s[0m (1635594.04 pixels/s)
+  OpenMP (threads=1, iter=2)... [0;32m0.499097s[0m (1846534.84 pixels/s)
+  OpenMP (threads=1, iter=3)... [0;32m0.504167s[0m (1827965.73 pixels/s)
+  Average: 0.522 ± 0.029 seconds
+  Testing with 2 threads:
+  OpenMP (threads=2, iter=1)... [0;32m0.284732s[0m (3236727.87 pixels/s)
+  OpenMP (threads=2, iter=2)... [0;32m0.263011s[0m (3504035.95 pixels/s)
+  OpenMP (threads=2, iter=3)... [0;32m0.259792s[0m (3547453.34 pixels/s)
+  Average: 0.269 ± 0.011 seconds
+  Testing with 4 threads:
+  OpenMP (threads=4, iter=1)... [0;32m0.157634s[0m (5846454.44 pixels/s)
+  OpenMP (threads=4, iter=2)... [0;32m0.153263s[0m (6013193.00 pixels/s)
+  OpenMP (threads=4, iter=3)... [0;32m0.141307s[0m (6521969.89 pixels/s)
+  Average: 0.151 ± 0.007 seconds
+  Testing with 8 threads:
+  OpenMP (threads=8, iter=1)... [0;32m0.0920254s[0m (10014626.39 pixels/s)
+  OpenMP (threads=8, iter=2)... [0;32m0.078673s[0m (11714311.13 pixels/s)
+  OpenMP (threads=8, iter=3)... [0;32m0.0800871s[0m (11507471.24 pixels/s)
+  Average: 0.084 ± 0.006 seconds
+
+CUDA Implementation:
+  CUDA (threads=1, iter=1)... [0;32m0.000305856s[0m (3013182674.19 pixels/s)
+  CUDA (threads=1, iter=2)... [0;32m0.000308032s[0m (2991896945.77 pixels/s)
+  CUDA (threads=1, iter=3)... [0;32m0.000335872s[0m (2743902439.02 pixels/s)
+  Average: 0.000 ± 0.000 seconds
+
+
+=========================================
+Performance Summary Report
+=========================================
+
+Average Execution Times (seconds):
+-----------------------------------
+Implementation  Simple       Medium       Complex     
+-----------------------------------
+Serial          0.056 ± 0.004 0.173 ± 0.011 0.503 ± 0.007
+OpenMP (4t)     0.019 ± 0.000 0.052 ± 0.005 0.151 ± 0.007
+CUDA            5.058 ± 0.306 9.849 ± 0.024 0.000 ± 0.000
+-----------------------------------
+
+Speedup Analysis:
+-----------------
+Speedups (Medium Scene):
+  OpenMP vs Serial:  3.30x
+  CUDA vs Serial:    .01x
+
+Requirement Verification:
+-------------------------
+  OpenMP speedup:  [0;32m✓ PASSED[0m (3.30x ≥ 2.5x)
+  CUDA speedup:    [0;31m✗ FAILED[0m (.01x < 10x)
+
+Results saved to: benchmark_results/benchmark_20251209_204253.csv
+
+=========================================
+Benchmark Complete!
+=========================================

@@ -243,10 +243,13 @@ int main(int argc, char *argv[])
     // Framebuffer
     std::vector<Vec3> framebuffer(width * height);
 
-    // Timing
+    // Timing variables
     auto start = std::chrono::high_resolution_clock::now();
+    auto end = start;
+    std::chrono::duration<double> diff;
 
-    // SERIAL VERSION
+#ifndef _OPENMP
+    // SERIAL VERSION (only when OpenMP is not available)
     std::cout << "Rendering (Serial)...\n";
     for (int j = 0; j < height; j++)
     {
@@ -263,24 +266,24 @@ int main(int argc, char *argv[])
         }
     }
 
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
-    double serial_time = diff.count();
-    std::cout << "Serial time: " << serial_time << " seconds\n";
+    end = std::chrono::high_resolution_clock::now();
+    diff = end - start;
+    std::cout << "Serial time: " << diff.count() << " seconds\n";
 
     write_ppm("output_serial.ppm", framebuffer, width, height);
-
-// OPENMP VERSION
-#ifdef _OPENMP
-    std::cout << "\nRendering (OpenMP)...\n";
+#else
+    // OPENMP VERSION
+    std::cout << "Rendering (OpenMP)...\n";
     std::cout << "Using " << omp_get_max_threads() << " threads\n";
-    start = std::chrono::high_resolution_clock::now();
 
-// Parallel ray tracing with optimal OpenMP configuration
-// - collapse(2): Parallelize both i and j loops for maximum parallelism
-// - schedule(guided): Dynamic load balancing (ray tracing workload varies per pixel)
+// Optimized parallel ray tracing with OpenMP
+// - schedule(dynamic, 1): Fine-grained dynamic scheduling for optimal load balancing
+//   * Chunk size of 1 row ensures no thread sits idle while others are still working
+//   * Critical for workloads with varying pixel complexity (reflections, shadows)
+//   * Small overhead per chunk is acceptable for compute-intensive ray tracing
+// - Parallelize outer loop only for better cache locality
 // - Each pixel writes to unique framebuffer location (no race conditions)
-#pragma omp parallel for collapse(2) schedule(guided)
+#pragma omp parallel for schedule(dynamic, 1)
     for (int j = 0; j < height; j++)
     {
         for (int i = 0; i < width; i++)
@@ -295,9 +298,7 @@ int main(int argc, char *argv[])
 
     end = std::chrono::high_resolution_clock::now();
     diff = end - start;
-    double parallel_time = diff.count();
-    std::cout << "OpenMP time: " << parallel_time << " seconds\n";
-    std::cout << "Speedup: " << (serial_time / parallel_time) << "x\n";
+    std::cout << "OpenMP time: " << diff.count() << " seconds\n";
 
     write_ppm("output_openmp.ppm", framebuffer, width, height);
 #endif

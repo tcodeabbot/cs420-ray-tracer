@@ -28,11 +28,6 @@ RESULTS_FILE="$OUTPUT_DIR/benchmark_${TIMESTAMP}.csv"
 # Write CSV header
 echo "Implementation,Scene,Threads,Iteration,Time(s),Pixels/s,Speedup" > $RESULTS_FILE
 
-# Function to extract time from program output
-extract_time() {
-    grep -E "(time:|seconds)" | head -1 | grep -oE "[0-9]+\.[0-9]+"
-}
-
 # Function to calculate pixels per second
 calc_pixels_per_second() {
     local time=$1
@@ -58,17 +53,11 @@ run_benchmark() {
     
     # Set thread count for OpenMP
     export OMP_NUM_THREADS=$threads
-    
-    # Run and measure time
-    start_time=$(date +%s.%N)
-    if [ "$name" == "OpenMP" ]; then
-        timeout 60 ./$executable --openmp < /dev/null > temp_output.log 2>&1
-    else
-        timeout 60 ./$executable < /dev/null > temp_output.log 2>&1
-    fi
+
+    # Run and capture output
+    timeout 60 ./$executable "scenes/$scene" > temp_output.log 2>&1
     exit_code=$?
-    end_time=$(date +%s.%N)
-    
+
     if [ $exit_code -eq 124 ]; then
         echo -e "${RED}TIMEOUT${NC}"
         echo "$name,$scene,$threads,$iteration,TIMEOUT,0,0" >> $RESULTS_FILE
@@ -78,9 +67,24 @@ run_benchmark() {
         echo "$name,$scene,$threads,$iteration,FAILED,0,0" >> $RESULTS_FILE
         return
     fi
-    
-    # Calculate elapsed time
-    elapsed=$(echo "$end_time - $start_time" | bc)
+
+    # Extract elapsed time from program output (handles scientific notation)
+    if [ "$name" == "Serial" ]; then
+        elapsed=$(grep -oP 'Serial time: \K[0-9.eE+-]+' temp_output.log)
+    elif [ "$name" == "OpenMP" ]; then
+        elapsed=$(grep -oP 'OpenMP time: \K[0-9.eE+-]+' temp_output.log)
+    elif [ "$name" == "CUDA" ]; then
+        elapsed=$(grep -oP 'GPU rendering time: \K[0-9.eE+-]+' temp_output.log)
+    elif [ "$name" == "Hybrid" ]; then
+        elapsed=$(grep -oP 'Hybrid time: \K[0-9.eE+-]+' temp_output.log)
+    fi
+
+    # If extraction failed, mark as failed
+    if [ -z "$elapsed" ]; then
+        echo -e "${RED}FAILED${NC} (no timing found)"
+        echo "$name,$scene,$threads,$iteration,FAILED,0,0" >> $RESULTS_FILE
+        return
+    fi
     
     # Get image dimensions (assuming 640x480 for simple, 800x600 for medium, 1280x720 for complex)
     case $scene in

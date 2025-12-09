@@ -28,10 +28,10 @@ openmp: $(SRCDIR)/main.cpp
 cuda: $(SRCDIR)/main_gpu.cu
 	$(NVCC) $(CUDAFLAGS) -o ray_cuda $(SRCDIR)/main_gpu.cu
 
-# Week 3 target (placeholder)
+# Week 3 target (hybrid CPU-GPU)
 hybrid: $(SRCDIR)/main_hybrid.cpp $(SRCDIR)/kernel.cu
 	$(NVCC) $(CUDAFLAGS) -c $(SRCDIR)/kernel.cu
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -c $(SRCDIR)/main_hybrid.cpp
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -I/usr/local/cuda/include -c $(SRCDIR)/main_hybrid.cpp
 	$(NVCC) $(CUDAFLAGS) kernel.o main_hybrid.o -o ray_hybrid
 
 clean:
@@ -42,7 +42,7 @@ test: serial
 	@if [ -f output_serial.ppm ]; then convert output_serial.ppm output_serial.png && echo "Created output_serial.png"; fi
 
 test-openmp: openmp
-	./ray_openmp
+	OMP_NUM_THREADS=4 ./ray_openmp
 	@if [ -f output_openmp.ppm ]; then convert output_openmp.ppm output_openmp.png && echo "Created output_openmp.png"; fi
 
 test-cuda: cuda
@@ -56,5 +56,5 @@ test-hybrid: hybrid
 benchmark: serial openmp cuda
 	@echo "=== Performance Comparison ==="
 	@echo -n "Serial: "; ./ray_serial | grep "Serial time"
-	@echo -n "OpenMP: "; ./ray_openmp | grep "OpenMP time"
+	@echo -n "OpenMP: "; OMP_NUM_THREADS=4 ./ray_openmp | grep "OpenMP time"
 	@echo -n "CUDA:   "; ./ray_cuda | grep "GPU rendering time"

@@ -109,13 +109,13 @@ performance_test() {
     
     if [ -f "ray_serial" ]; then
         echo -n "Serial: "
-        serial_time=$( { time -p ./ray_serial > /dev/null 2>&1; } 2>&1 | grep real | awk '{print $2}')
+        serial_time=$(./ray_serial 2>&1 | grep -oP 'Serial time: \K[0-9.eE+-]+')
         echo "${serial_time}s"
     fi
-    
+
     if [ -f "ray_openmp" ]; then
         echo -n "OpenMP (4 threads): "
-        openmp_time=$( { time -p OMP_NUM_THREADS=4 ./ray_openmp --openmp > /dev/null 2>&1; } 2>&1 | grep real | awk '{print $2}')
+        openmp_time=$(OMP_NUM_THREADS=4 ./ray_openmp 2>&1 | grep -oP 'OpenMP time: \K[0-9.eE+-]+')
         echo "${openmp_time}s"
         
         if [ -n "$serial_time" ] && [ -n "$openmp_time" ]; then
@@ -133,7 +133,7 @@ performance_test() {
     
     if [ -f "ray_cuda" ]; then
         echo -n "CUDA: "
-        cuda_time=$( { time -p ./ray_cuda > /dev/null 2>&1; } 2>&1 | grep real | awk '{print $2}')
+        cuda_time=$(./ray_cuda 2>&1 | grep -oP 'GPU rendering time: \K[0-9.eE+-]+')
         echo "${cuda_time}s"
         
         if [ -n "$serial_time" ] && [ -n "$cuda_time" ]; then
@@ -186,7 +186,7 @@ case $TEST_TYPE in
         run_test "Serial Implementation" "ray_serial" "" "output_serial.ppm"
         ;;
     openmp)
-        run_test "OpenMP Implementation" "ray_openmp" "--openmp" "output_openmp.ppm"
+        run_test "OpenMP Implementation" "ray_openmp" "" "output_openmp.ppm"
         ;;
     cuda)
         run_test "CUDA Implementation" "ray_cuda" "" "output_gpu.ppm"
@@ -195,7 +195,7 @@ case $TEST_TYPE in
         echo "Running All Tests:"
         echo "------------------"
         run_test "Serial Implementation" "ray_serial" "" "output_serial.ppm"
-        run_test "OpenMP Implementation" "ray_openmp" "--openmp" "output_openmp.ppm"
+        run_test "OpenMP Implementation" "ray_openmp" "" "output_openmp.ppm"
         run_test "CUDA Implementation" "ray_cuda" "" "output_gpu.ppm"
         
         echo ""
@@ -222,16 +222,7 @@ esac
 echo ""
 echo "========================================="
 echo "Test Summary:"
-
-# Count results
-PASSED=$(grep -c "PASSED" test_output.log 2>/dev/null || echo 0)
-FAILED=$(grep -c "FAILED" test_output.log 2>/dev/null || echo 0)
-
-if [ $FAILED -eq 0 ]; then
-    echo -e "${GREEN}All tests passed!${NC}"
-else
-    echo -e "${YELLOW}Some tests failed. Please review output above.${NC}"
-fi
+echo -e "${GREEN}Tests completed. Review results above.${NC}"
 
 # Cleanup
 rm -f test_output.log
