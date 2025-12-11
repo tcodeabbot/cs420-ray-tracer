@@ -32,7 +32,7 @@ cuda: $(SRCDIR)/main_gpu.cu
 hybrid: $(SRCDIR)/main_hybrid.cpp $(SRCDIR)/kernel.cu
 	$(NVCC) $(CUDAFLAGS) -c $(SRCDIR)/kernel.cu
 	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -I/usr/local/cuda/include -c $(SRCDIR)/main_hybrid.cpp
-	$(NVCC) $(CUDAFLAGS) kernel.o main_hybrid.o -o ray_hybrid
+	$(NVCC) $(CUDAFLAGS) -Xlinker -lgomp kernel.o main_hybrid.o -o ray_hybrid
 
 clean:
 	rm -f ray_serial ray_openmp ray_cuda ray_hybrid *.o *.ppm *.png
