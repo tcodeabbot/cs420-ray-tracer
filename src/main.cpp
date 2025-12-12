@@ -283,7 +283,7 @@ int main(int argc, char *argv[])
 //   * Small overhead per chunk is acceptable for compute-intensive ray tracing
 // - Parallelize outer loop only for better cache locality
 // - Each pixel writes to unique framebuffer location (no race conditions)
-#pragma omp parallel for schedule(dynamic, 1)
+#pragma omp parallel for num_threads(8) schedule(dynamic, 1)
     for (int j = 0; j < height; j++)
     {
         for (int i = 0; i < width; i++)
