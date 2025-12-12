@@ -2,10 +2,10 @@ CXX = g++
 CXXFLAGS = -std=c++11 -O3 -Wall
 OMPFLAGS = -fopenmp
 NVCC = nvcc
-# Use sm_75 for Turing+ GPUs, or sm_86 for Ampere+
+# Use sm_75 for Turing+ GPUs, sm_86 for Ampere+, sm_90 for Hopper, sm_120 for Blackwell (RTX 5070 Ti)
 # Use sm_52 for older Maxwell GPUs if needed
 # CUDA 13.0 compatibility: force include cuda_fix.h and define constants
-CUDAFLAGS = -O3 -arch=sm_75 -std=c++14 --compiler-options -include,$(INCDIR)/cuda_fix.h
+CUDAFLAGS = -O3 -arch=sm_120 -std=c++14 --compiler-options -include,$(INCDIR)/cuda_fix.h
 
 # Define source and include directories
 SRCDIR = src
@@ -26,13 +26,13 @@ openmp: $(SRCDIR)/main.cpp
 
 # Week 2 target (placeholder)
 cuda: $(SRCDIR)/main_gpu.cu
-	$(NVCC) $(CUDAFLAGS) -o ray_cuda $(SRCDIR)/main_gpu.cu
+	$(NVCC) $(CUDAFLAGS) -lstdc++ -lm -o ray_cuda $(SRCDIR)/main_gpu.cu
 
 # Week 3 target (hybrid CPU-GPU)
-hybrid: $(SRCDIR)/main_hybrid.cpp $(SRCDIR)/kernel.cu
-	$(NVCC) $(CUDAFLAGS) -c $(SRCDIR)/kernel.cu
-	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -I/usr/local/cuda/include -c $(SRCDIR)/main_hybrid.cpp
-	$(NVCC) $(CUDAFLAGS) -Xlinker -lgomp kernel.o main_hybrid.o -o ray_hybrid
+hybrid: src/kernel.cu src/main_hybrid.cpp
+	$(NVCC) $(CUDAFLAGS) -c src/kernel.cu -o kernel.o
+	$(CXX) $(CXXFLAGS) $(OMPFLAGS) -I/usr/local/cuda/include -c src/main_hybrid.cpp -o main_hybrid.o
+	$(NVCC) $(CUDAFLAGS) -Xcompiler -fopenmp kernel.o main_hybrid.o -o ray_hybrid -lgomp
 
 clean:
 	rm -f ray_serial ray_openmp ray_cuda ray_hybrid *.o *.ppm *.png
